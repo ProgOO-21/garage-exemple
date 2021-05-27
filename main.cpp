@@ -28,7 +28,7 @@ enum Role
 
 struct User
 {
-    virtual ~User(){}
+    virtual ~User() {}
 
     Role getRole()
     {
@@ -39,14 +39,30 @@ struct User
     Role role = Role::no;
 };
 
-struct HasColor
+// interface
+struct IPrintable
+{
+    virtual void print() = 0;
+};
+
+// un interface peu hériter d'un autre interface
+struct HasColor : public IPrintable
 {
     virtual int getColor() = 0;
 };
 
 struct Vehicle
 {
-    virtual ~Vehicle(){}
+    virtual ~Vehicle() {}
+
+    virtual string getInfo()
+    {
+        return "  - id : " + std::to_string(id) +
+               "\n"
+               "  - price : " +
+               std::to_string(price) + "\n";
+    }
+
     int id;
     int price;
     string brand;
@@ -56,56 +72,86 @@ struct Camion : public Vehicle, public HasColor
 {
     int essieu;
 
+    virtual string getInfo()
+    {
+        return Vehicle::getInfo() + "  - essieu : " + std::to_string(essieu) + "\n";
+    }
+
     int getColor() override
     {
-        return 2;
+        // pas besoin d'implémenter une classe couleur, faire simple.
+        // Idem pour niveau ou suspension
+        return 2; 
+    }
+
+    void print(){
+        cout << "Implementation de l'interface print dans camion" << endl;
     }
 };
 
-// possibilité par héritage
-struct OptionA{
-    void checkOptionA(Vehicle* v){
+// possibilité par héritage, est-un ...
+struct OptionA
+{
+    void checkOptionA(Vehicle* v)
+    {
         cout << "Test option A " << v->brand << endl;
     }
-};
 
-// possibilité par composition
-struct OptionB
-{
-    void checkOption(Vehicle* v){
-        cout << "Test option B " << v->brand << endl;
+    // utilisation d'un interface
+    void checkOptionAInt(IPrintable* p){
+        p->print();
     }
 };
 
+// possibilité par composition, contient un ...
+struct OptionB
+{
+    void checkOption(Vehicle* v)
+    {
+        cout << "Test option B " << v->brand << endl;
+    }
+
+    void checkOptionBInt(IPrintable* b){
+        b->print();
+    }
+};
 
 struct Test : public OptionA
 {
-    // 2 possibilités d'implémentation
+    // 2 possibilités d'implémentation, passe le véhicule ou l'interface en paramètre
     void test(HasColor* obj)
     {
         cout << "Nous allons tester la couleur " << endl;
-        cout << "Le résultat est " << obj->getColor() << endl;
+        cout << "Le résultat est " << obj->getColor() << endl; // suffisant pour un test
+        checkOptionAInt(obj); // autorisé car hasColor est un printable
     }
 
-    void test1(Vehicle* v){
-        if( auto res = dynamic_cast<HasColor*>(v) ){
+    void test1(Vehicle* v)
+    {
+        if (auto res = dynamic_cast<HasColor*>(v))
+        {
             cout << "Un objet de type HasColor est testé" << endl;
             checkOptionA(v);
+            checkOptionAInt(res); // autorisé car hasColor est un printable
             ob.checkOption(v);
+            ob.checkOptionBInt(res); // autorisé car hasColor est un printable
             cout << "Nous allons tester la couleur " << endl;
             cout << "Le résultat est " << res->getColor() << endl;
         }
     }
 
-    OptionB ob;
+    OptionB ob; // ajout d'une option par composition
 };
-
 
 struct SuperUser : public User
 {
-    SuperUser() { role = Role::user; }
+    SuperUser()
+    {
+        role = Role::user;
+    }
 
-    void buy(Vehicle* v) {
+    void buy(Vehicle* v)
+    {
         this->v = v;
         cout << "Mon compte c'est vidé de " << v->price << " !!!!" << endl;
     }
@@ -115,7 +161,8 @@ struct SuperUser : public User
 class Garage
 {
   public:
-    Garage(){
+    Garage()
+    {
         // ce code est ici pour la démo
         Vehicle* c = new Camion();
         c->id = 5;
@@ -142,23 +189,26 @@ class Garage
     {
         Vehicle* res = getVehicle(id);
         // retirer du stock ( attention si pointeur est au millieu du tableau )
-       return res;
+        return res;
     }
 
     void printList(User& u)
     {
-        if ( SuperUser* su = dynamic_cast<SuperUser*>(&u) )
+        if (SuperUser* su = dynamic_cast<SuperUser*>(&u))
         {
             cout << "C'est un super user" << endl;
+            cout << getVehicle(5)->getInfo() << endl;
         }
-        else{
+        else
+        {
             cout << "C'est un user" << endl;
         }
     }
 
     Vehicle** getList(User& u)
     {
-        if(u.getRole() < Role::user){
+        if (u.getRole() < Role::user)
+        {
             throw MyException("Ask permission!!!");
         }
         return this->v;
@@ -168,33 +218,39 @@ class Garage
     Vehicle* v[4] = {nullptr};
 };
 
-
 struct Employer : public User
 {
-    Employer() { role = Role::admin; }
+    Employer()
+    {
+        role = Role::admin;
+    }
 
     void sell(int id, SuperUser& u)
     {
         try
         {
-        // nous allons le voir au cours, le type auto est un type automatique en fonction 
-        // de l'affectation
-        auto v = g->getVehicle(id);
-        cout << "La voiture est : " << endl;
-        u.buy(v);
+            // nous allons le voir au cours, le type auto est un type automatique en fonction
+            // de l'affectation
+            auto v = g->getVehicle(id);
+            cout << "La voiture est : " << endl;
+            u.buy(v);
         }
-        catch(...){
-            cout << "Houston..." << endl;        }
+        catch (...)
+        {
+            cout << "Houston..." << endl;
+        }
     }
 
     void tester()
     {
         Vehicle** list = g->getList(*this);
-        int i=0;
-        // les boucles ne sont pas implémentée correctement
-        while( list[i] != nullptr && i < 4 ){
+        int i = 0;
+        // les boucles ne sont pas implémentées correctement
+        while (list[i] != nullptr && i < 4)
+        {
             // possibilité 1
-            if( auto res = dynamic_cast<HasColor*>(list[i]) ){
+            if (auto res = dynamic_cast<HasColor*>(list[i]))
+            {
                 cout << "Un objet de type HasColor est testé" << endl;
                 t.test(res);
             }
@@ -210,15 +266,16 @@ struct Employer : public User
     Test t;
 };
 
-
 // il serait aussi possible de mettre l'action acheter dans une fonction
 // plutôt que dans la méthode sell
-void sell(int id, SuperUser& su, Employer& em){
-    //auto v = em.sell(id);
-    //su.buy(v);
+void sell(int id, SuperUser& su, Employer& em)
+{
+    // auto v = em.sell(id);
+    // su.buy(v);
 }
 
-int main() {
+int main()
+{
     Garage g;
     User u;
     SuperUser su;
@@ -226,11 +283,11 @@ int main() {
 
     g.printList(u);
     em.tester();
-    
+
     // choix d'un article après avoir vu la liste
     g.printList(su);
     int idChoose = 5;
-    em.sell(idChoose, su); 
+    em.sell(idChoose, su);
     // il serait possible de croiser l'acheteur et le vendeur en modifiant les méthodes
     // su.buy(idChoose, em)
 
@@ -238,7 +295,7 @@ int main() {
     {
         g.getList(u);
     }
-    catch(const std::exception& e)
+    catch (const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }
